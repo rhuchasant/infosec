@@ -11,7 +11,7 @@ const port = 3000;
 const db = mysql.createConnection({
   host: 'localhost',
   user: 'root',        // use your MySQL username
-  password: 'root123',        // your password
+  password: 'Rhucha2301$',        // your password
   database: 'auctiondb'
 });
 
@@ -72,16 +72,16 @@ app.post('/login', (req, res) => {
     const { username, password } = req.body;
     
     // Check for common SQL injection patterns
-    const hasSQLInjection = username.includes("'") || 
-                           username.includes('"') || 
-                           username.includes('=') ||
-                           username.includes('--') ||
-                           username.includes(';') ||
-                           password.includes("'") ||
-                           password.includes('"') ||
-                           password.includes('=') ||
-                           password.includes('--') ||
-                           password.includes(';');
+    // const hasSQLInjection = username.includes("'") || 
+    //                        username.includes('"') || 
+    //                        username.includes('=') ||
+    //                        username.includes('--') ||
+    //                        username.includes(';') ||
+    //                        password.includes("'") ||
+    //                        password.includes('"') ||
+    //                        password.includes('=') ||
+    //                        password.includes('--') ||
+    //                        password.includes(';');
     
     // ❌ Vulnerable version: using string concatenation
     const query = `SELECT * FROM users WHERE username = '${username}' AND password = '${password}'`;
@@ -100,7 +100,7 @@ app.post('/login', (req, res) => {
         req.session.user = results[0];
         return res.json({
           success: true,
-          isVulnerable: hasSQLInjection, // Only true if SQL injection was detected
+        //   isVulnerable: hasSQLInjection, // Only true if SQL injection was detected
           username: username,
           redirectUrl: '/homepage'
         });
