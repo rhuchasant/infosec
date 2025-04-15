@@ -1,0 +1,17 @@
+{
+  "name": "auction-xss-project",
+  "version": "1.0.0",
+  "description": "A project to demo XSS and payment manipulation vulnerabilities.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "body-parser": "^1.20.3",
+    "cookie-parser": "^1.4.7",
+    "ejs": "^3.1.10",
+    "express": "^4.21.2"
+  },
+  "author": "",
+  "license": "ISC"
+}

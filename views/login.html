@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Auction House | Login</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <div class="diagonal-container">
+    <div class="left-diagonal">
+      <div class="overlay">
+        <h1>Auction<span>House</span></h1>
+        <p id="tagline">Bid Now. Win Big.</p>
+        <div class="ticker">
+          🔔 MacBook sold for $999 | PS5 live auction ends in 5 min | Rare NFT at $320...
+        </div>
+      </div>
+    </div>
+    
+    <div class="right-content">
+      <main class="login-box">
+        <h2>Login to Your Account</h2>
+        <form action="/login" method="POST" class="login-form">
+          <label for="username">Username</label>
+          <input type="text" name="username" required placeholder="e.g. fastBidder42" />
+          
+          <label for="password">Password</label>
+          <input type="password" name="password" required placeholder="••••••••" />
+
+          <button type="submit">Login</button>
+        </form>
+        <p class="signup-msg">New here? <a href="#">Create your account</a></p>
+      </main>
+    </div>
+  </div>
+  <script src="/script.js"></script>
+</body>
+</html>
