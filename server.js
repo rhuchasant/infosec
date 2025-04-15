@@ -34,12 +34,12 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'views', 'login.html'));
 });
 
-app.get('/index', (req, res) => {
+app.get('/homepage', (req, res) => {
   if (!req.session.user) {
     res.redirect('/');
     return;
   }
-  res.sendFile(path.join(__dirname, 'views', 'index.html'));
+  res.sendFile(path.join(__dirname, 'views', 'homepage.html'));
 });
 
 app.get('/login', (req, res) => {
@@ -102,7 +102,7 @@ app.post('/login', (req, res) => {
           success: true,
           isVulnerable: hasSQLInjection, // Only true if SQL injection was detected
           username: username,
-          redirectUrl: '/index'
+          redirectUrl: '/homepage'
         });
       } else {
         // Failed login
