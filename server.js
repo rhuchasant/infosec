@@ -10,14 +10,32 @@ const port = 3000;
 // MySQL Connection
 const db = mysql.createConnection({
   host: 'localhost',
-  user: 'root',        // use your MySQL username
-  password: 'Rhucha2301$',        // your password
-  database: 'auctiondb'
+  user: 'root',        // replace with your MySQL username
+  password: 'root123', // replace with your MySQL password
+  database: 'auctiondb'  // replace with your database name
 });
 
-db.connect(err => {
-  if (err) throw err;
-  console.log('Connected to MySQL');
+// Handle connection errors
+db.connect((err) => {
+  if (err) {
+    console.error('Error connecting to MySQL:', err);
+    return;
+  }
+  console.log('Connected to MySQL database');
+});
+
+// Handle errors after initial connection
+db.on('error', (err) => {
+  console.error('MySQL error:', err);
+  if (err.code === 'PROTOCOL_CONNECTION_LOST') {
+    console.log('Database connection was closed.');
+  }
+  if (err.code === 'ER_CON_COUNT_ERROR') {
+    console.log('Database has too many connections.');
+  }
+  if (err.code === 'ECONNREFUSED') {
+    console.log('Database connection was refused.');
+  }
 });
 
 // Middleware
@@ -130,6 +148,29 @@ app.post('/login', (req, res) => {
 //     }
 //   });
 // });
+
+// Search endpoint
+app.get('/api/search', (req, res) => {
+    const searchQuery = req.query.q || '';
+    
+    // ❌ Vulnerable version: using string concatenation
+    const query = `SELECT * FROM Items WHERE prodinfo LIKE '%${searchQuery}%' OR username LIKE '%${searchQuery}%'`;
+    
+    db.query(query, (err, results) => {
+        if (err) {
+            console.error('Database error:', err);
+            return res.status(500).json({
+                success: false,
+                message: 'Database error occurred'
+            });
+        }
+        
+        return res.json({
+            success: true,
+            results: results
+        });
+    });
+});
 
 //Start server
 app.listen(port, () => {

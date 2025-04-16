@@ -5,6 +5,35 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Search Items</title>
   <link rel="stylesheet" href="/styles.css">
+  <style>
+    .search-results {
+      margin-top: 2rem;
+    }
+    .result-item {
+      background: white;
+      padding: 1rem;
+      margin-bottom: 1rem;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .result-item h3 {
+      color: #5a6580;
+      margin-bottom: 0.5rem;
+    }
+    .result-item p {
+      margin: 0.5rem 0;
+      color: #666;
+    }
+    .no-results {
+      text-align: center;
+      color: #666;
+      padding: 2rem;
+    }
+    .current-bid {
+      font-weight: bold;
+      color: #5a6580;
+    }
+  </style>
 </head>
 <body>
   <nav>
@@ -20,16 +49,58 @@
   <div class="container">
     <div class="card">
       <h1>Search Items</h1>
-      <form method="GET" action="/search" class="form-group">
-        <input name="q" placeholder="Search for items..." />
+      <form id="searchForm" class="form-group">
+        <input type="text" name="q" id="searchQuery" placeholder="Enter username or item" required />
         <button type="submit">Search</button>
       </form>
 
-      <div class="search-results">
-        <h2>Results for: <span><%= query %></span></h2>
-        <!-- Search results will be populated here -->
+      <div id="searchResults" class="search-results">
+        <!-- Results will be populated here -->
       </div>
     </div>
   </div>
+
+  <script>
+    document.getElementById('searchForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const query = document.getElementById('searchQuery').value;
+      
+      fetch(`/api/search?q=${encodeURIComponent(query)}`)
+        .then(response => response.json())
+        .then(data => {
+          const resultsDiv = document.getElementById('searchResults');
+          
+          if (data.results && data.results.length > 0) {
+            resultsDiv.innerHTML = `
+              <h2>Search Results</h2>
+              ${data.results.map(item => `
+                <div class="result-item">
+                  <h3>${item.prodinfo}</h3>
+                  <p class="current-bid">Current Bid: ${item.currentbid}</p>
+                  <p>Seller: ${item.username}</p>
+                  <button onclick="window.location.href='/checkout?item=${item.ItemID}'">Place Bid</button>
+                </div>
+              `).join('')}
+            `;
+          } else {
+            resultsDiv.innerHTML = `
+              <div class="no-results">
+                <h2>No items found</h2>
+                <p>Try searching with different keywords</p>
+              </div>
+            `;
+          }
+        })
+        .catch(error => {
+          console.error('Error:', error);
+          document.getElementById('searchResults').innerHTML = `
+            <div class="no-results">
+              <h2>Error</h2>
+              <p>An error occurred while searching. Please try again.</p>
+            </div>
+          `;
+        });
+    });
+  </script>
 </body>
 </html>
