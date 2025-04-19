@@ -3,6 +3,8 @@ const mysql = require('mysql2');
 const bodyParser = require('body-parser');
 const session = require('express-session');
 const path = require('path');
+const fs = require('fs');
+const https = require('https');
 
 const app = express();
 const port = 3000;
@@ -46,6 +48,12 @@ app.use(session({
   resave: false,
   saveUninitialized: true
 }));
+
+// SSL Configuration
+const sslOptions = {
+    key: fs.readFileSync('./cert/server.key'),
+    cert: fs.readFileSync('./cert/server.cert')
+};
 
 // Routes
 app.get('/', (req, res) => {
@@ -172,7 +180,10 @@ app.get('/api/search', (req, res) => {
     });
 });
 
-//Start server
-app.listen(port, () => {
-  console.log(`🚀 Server running at http://localhost:${port}`);
+// Create HTTPS server
+const httpsServer = https.createServer(sslOptions, app);
+
+// Start the server
+httpsServer.listen(3000, () => {
+    console.log('🔒 Secure server running at https://localhost:3000');
 });
