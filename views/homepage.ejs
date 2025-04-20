@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Online Auction</title>
+  <link rel="stylesheet" href="/styles.css">
+  <style>
+    .featured-items {
+      margin-top: 20px;
+    }
+    .result-item {
+      background: #fff;
+      padding: 20px;
+      margin-bottom: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .result-item h3 {
+      margin: 0 0 10px 0;
+      color: #333;
+    }
+    .result-item p {
+      margin: 5px 0;
+      color: #666;
+    }
+    .description-link {
+      display: inline-block;
+      margin-top: 10px;
+      color: #4CAF50;
+      text-decoration: none;
+    }
+    .description-link:hover {
+      text-decoration: underline;
+    }
+    .bid-button {
+      background-color: #4CAF50;
+      color: white;
+      padding: 8px 15px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+    .bid-button:hover {
+      background-color: #45a049;
+    }
+  </style>
+</head>
+<body>
+  <nav>
+    <ul>
+      <li><a href="/homepage">Home</a></li>
+      <li><a href="/search">Search Items</a></li>
+      <li><a href="/add-item">Add Item</a></li>
+      <li><a href="/profile">Profile</a></li>
+      <li><a href="/checkout">Checkout</a></li>
+      <li><a href="/logout" id="logoutLink">Logout</a></li>
+    </ul>
+  </nav>
+
+  <div class="container">
+    <div class="card">
+      <h1>Welcome to the Online Auction Platform</h1>
+      <div class="welcome-message">
+        ✅ Welcome, <%= username %>! You are now logged in.
+      </div>
+      
+      <div class="featured-items">
+        <h2>Featured Items</h2>
+        <% if (items && items.length > 0) { %>
+          <% items.forEach(function(item) { %>
+            <div class="result-item">
+              <h3><%= item.title %></h3>
+              <p>Seller: <%= item.seller_name %></p>
+              <p>Starting Price: $<%= item.starting_price %></p>
+              <div class="description">
+                <%- item.description %>
+              </div>
+              <button class="bid-button">Place Bid</button>
+            </div>
+          <% }); %>
+        <% } else { %>
+          <p>No items available for auction yet.</p>
+        <% } %>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function showDescription(description) {
+      const div = document.createElement('div');
+      div.innerHTML = description;
+      document.body.appendChild(div);
+    }
+  </script>
+</body>
+</html> 

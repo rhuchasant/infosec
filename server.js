@@ -141,33 +141,49 @@ app.get('/checkout', (req, res) => {
 app.post('/login', (req, res) => {
   const { username, password } = req.body;
   
-  // Use parameterized query to prevent SQL injection
-  const query = 'SELECT * FROM users WHERE username = ? AND password = ?';
-  db.query(query, [username, password], (err, results) => {
+  // Check for common SQL injection patterns
+  // const hasSQLInjection = username.includes("'") || 
+  //                        username.includes('"') || 
+  //                        username.includes('=') ||
+  //                        username.includes('--') ||
+  //                        username.includes(';') ||
+  //                        password.includes("'") ||
+  //                        password.includes('"') ||
+  //                        password.includes('=') ||
+  //                        password.includes('--') ||
+  //                        password.includes(';');
+  
+  // ❌ Vulnerable version: using string concatenation
+  const query = `SELECT * FROM users WHERE username = '${username}' AND password = '${password}'`;
+  
+  db.query(query, (err, results) => {
     if (err) {
       console.error('Database error:', err);
-      return res.status(500).json({ success: false, message: 'Database error occurred' });
+      return res.status(500).json({
+        success: false,
+        message: 'Database error occurred'
+      });
     }
     
     if (results.length > 0) {
-      // Set session
-      req.session.user = {
-        id: results[0].id,
-        username: results[0].username
-      };
-      
+      // Successful login
+      req.session.user = results[0];
       return res.json({
         success: true,
+      //   isVulnerable: hasSQLInjection, // Only true if SQL injection was detected
+        username: username,
         redirectUrl: '/homepage'
       });
     } else {
-      return res.json({
+      // Failed login
+      return res.status(401).json({
         success: false,
-        message: 'Invalid username or password'
+        message: '❌ Invalid username or password'
       });
     }
   });
 });
+
 
 // Add route to check authentication status
 app.get('/check-auth', (req, res) => {
