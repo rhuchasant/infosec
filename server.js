@@ -116,6 +116,10 @@ app.get('/login', (req, res) => {
   res.sendFile(path.join(__dirname, 'views', 'login.html'));
 });
 
+app.get('/logout', (req, res) => {
+  res.sendFile(path.join(__dirname, 'views', 'login.html'));
+});
+
 app.get('/search', (req, res) => {
   const query = req.query.q || '';
   res.sendFile(path.join(__dirname, 'views', 'search.html'));
@@ -275,13 +279,13 @@ app.post('/place-bid', (req, res) => {
     });
   }
 
-  const { item_id, amount } = req.body;
+  const { item_id, amount, starting_price } = req.body;
   
   // Validate required fields
-  if (!item_id || !amount) {
+  if (!item_id || !amount || !starting_price) {
     return res.status(400).json({
       success: false,
-      message: 'Item ID and bid amount are required'
+      message: 'Item ID, bid amount, and starting price are required'
     });
   }
 
@@ -293,60 +297,34 @@ app.post('/place-bid', (req, res) => {
     });
   }
 
+  // Use only the starting price from frontend for validation
+  if (amount <= starting_price) {
+    return res.status(400).json({
+      success: false,
+      message: `Bid amount must be higher than starting price of $${starting_price}`
+    });
+  }
+
   const user_id = req.session.user.id;
 
-  // First check if the bid amount is higher than the current highest bid
-  const checkBidQuery = `
-    SELECT COALESCE(MAX(amount), i.starting_price) as current_price
-    FROM items i
-    LEFT JOIN bids b ON i.id = b.item_id
-    WHERE i.id = ?
-    GROUP BY i.id
+  // Insert the new bid
+  const insertBidQuery = `
+    INSERT INTO bids (item_id, user_id, amount)
+    VALUES (?, ?, ?)
   `;
 
-  db.query(checkBidQuery, [item_id], (err, results) => {
+  db.query(insertBidQuery, [item_id, user_id, amount], (err, results) => {
     if (err) {
       console.error('Database error:', err);
       return res.status(500).json({
         success: false,
-        message: 'Error checking current bid'
+        message: 'Error placing bid'
       });
     }
 
-    if (results.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: 'Item not found'
-      });
-    }
-
-    const currentPrice = results[0].current_price;
-    if (amount <= currentPrice) {
-      return res.status(400).json({
-        success: false,
-        message: `Bid amount must be higher than current price of $${currentPrice}`
-      });
-    }
-
-    // Insert the new bid
-    const insertBidQuery = `
-      INSERT INTO bids (item_id, user_id, amount)
-      VALUES (?, ?, ?)
-    `;
-
-    db.query(insertBidQuery, [item_id, user_id, amount], (err, results) => {
-      if (err) {
-        console.error('Database error:', err);
-        return res.status(500).json({
-          success: false,
-          message: 'Error placing bid'
-        });
-      }
-
-      return res.json({
-        success: true,
-        message: 'Bid placed successfully'
-      });
+    return res.json({
+      success: true,
+      message: 'Bid placed successfully'
     });
   });
 });
