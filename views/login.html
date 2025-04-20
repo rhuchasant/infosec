@@ -76,31 +76,15 @@
       .then(response => response.json())
       .then(data => {
         if (data.success) {
-        //   if (data.isVulnerable) {
-        //     // Create and show popup
-        //     const popup = document.createElement('div');
-        //     popup.className = 'popup';
-        //     popup.innerHTML = `
-        //       <div class="popup-content">
-        //         <h3>⚠️ Security Warning!</h3>
-        //         <p>You have logged in using a vulnerable SQL query.</p>
-        //         <p>This login method is susceptible to SQL injection attacks.</p>
-        //         <button onclick="window.location.href='${data.redirectUrl}'">Continue to Homepage</button>
-        //       </div>
-        //     `;
-        //     document.body.appendChild(popup);
-        //   } else {
-        //     // Regular successful login
-             window.location.href = data.redirectUrl;
-           }
-        // } else {
-        //   // Handle login failure
-        //   alert(data.message);
-        // }
+          window.location.href = data.redirectUrl;
+        } else {
+          // Handle login failure
+          alert(data.message);
+        }
       })
       .catch(error => {
         console.error('Error:', error);
-        alert('An error occurred during login');
+        alert('An error occurred during login. Please try again.');
       });
     });
   </script>
