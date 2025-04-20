@@ -129,13 +129,6 @@ app.get('/profile', (req, res) => {
   res.sendFile(path.join(__dirname, 'views', 'profile.html'));
 });
 
-app.get('/checkout', (req, res) => {
-  if (!req.session.user) {
-    res.redirect('/login');
-    return;
-  }
-  res.sendFile(path.join(__dirname, 'views', 'checkout.html'));
-});
 
 // Login route
 app.post('/login', (req, res) => {
@@ -273,108 +266,191 @@ app.post('/api/add-item', (req, res) => {
   });
 });
 
-// Add this new route to fetch items
-app.get('/api/items', (req, res) => {
-  const query = `
-    SELECT i.*, u.username as seller_name 
-    FROM items i 
-    JOIN users u ON i.seller_id = u.id 
-    ORDER BY i.id DESC
-  `;
-  
-  db.query(query, (err, results) => {
-    if (err) {
-      console.error('Database error:', err);
-      return res.status(500).json({
-        success: false,
-        message: 'Error fetching items'
-      });
-    }
-
-    return res.json({
-      success: true,
-      items: results
-    });
-  });
-});
-
-// Add Item routes
-app.get('/add-item', (req, res) => {
-  if (!req.session.user) {
-    res.redirect('/login');
-    return;
-  }
-  res.sendFile(path.join(__dirname, 'views', 'add-item.html'));
-});
-
-app.post('/api/add-item', (req, res) => {
+// Place bid route
+app.post('/place-bid', (req, res) => {
   if (!req.session.user) {
     return res.status(401).json({
       success: false,
-      message: 'Please login to add items'
+      message: 'Please login to place bids'
     });
   }
 
-  const { title, description, starting_price } = req.body;
+  const { item_id, amount } = req.body;
   
   // Validate required fields
-  if (!title || !starting_price) {
+  if (!item_id || !amount) {
     return res.status(400).json({
       success: false,
-      message: 'Title and starting price are required'
+      message: 'Item ID and bid amount are required'
     });
   }
 
-  const seller_id = req.session.user.id;
+  // Validate bid amount is a positive number
+  if (isNaN(amount) || amount <= 0) {
+    return res.status(400).json({
+      success: false,
+      message: 'Bid amount must be a positive number'
+    });
+  }
 
-  const query = `
-    INSERT INTO items (
-      seller_id, title, description, starting_price
-    ) VALUES (?, ?, ?, ?)
+  const user_id = req.session.user.id;
+
+  // First check if the bid amount is higher than the current highest bid
+  const checkBidQuery = `
+    SELECT COALESCE(MAX(amount), i.starting_price) as current_price
+    FROM items i
+    LEFT JOIN bids b ON i.id = b.item_id
+    WHERE i.id = ?
+    GROUP BY i.id
   `;
-  
-  db.query(query, [
-    seller_id, 
-    title, 
-    description || null,
-    starting_price
-  ], (err, results) => {
+
+  db.query(checkBidQuery, [item_id], (err, results) => {
     if (err) {
       console.error('Database error:', err);
       return res.status(500).json({
         success: false,
-        message: 'Error adding item to database'
+        message: 'Error checking current bid'
       });
     }
 
-    return res.json({
-      success: true,
-      message: 'Item added successfully'
+    if (results.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Item not found'
+      });
+    }
+
+    const currentPrice = results[0].current_price;
+    if (amount <= currentPrice) {
+      return res.status(400).json({
+        success: false,
+        message: `Bid amount must be higher than current price of $${currentPrice}`
+      });
+    }
+
+    // Insert the new bid
+    const insertBidQuery = `
+      INSERT INTO bids (item_id, user_id, amount)
+      VALUES (?, ?, ?)
+    `;
+
+    db.query(insertBidQuery, [item_id, user_id, amount], (err, results) => {
+      if (err) {
+        console.error('Database error:', err);
+        return res.status(500).json({
+          success: false,
+          message: 'Error placing bid'
+        });
+      }
+
+      return res.json({
+        success: true,
+        message: 'Bid placed successfully'
+      });
     });
   });
 });
 
-// Add this new route to fetch items
-app.get('/api/items', (req, res) => {
+app.post('/pay', (req, res) => {
+  if (!req.session.user) {
+    return res.status(401).json({
+      success: false,
+      message: 'Please login to view your bids'
+    });
+  }
+
+  const user_id = req.session.user.id;
+
+  // Fetch items that the user has bid on
   const query = `
-    SELECT i.*, u.username as seller_name 
-    FROM items i 
-    JOIN users u ON i.seller_id = u.id 
-    ORDER BY i.id DESC
+    SELECT 
+      i.id as item_id,
+      i.title,
+      i.description,
+      b.amount as bid_amount,
+      b.bid_time,
+      u.username as seller_name
+    FROM bids b
+    JOIN items i ON b.item_id = i.id
+    JOIN users u ON i.seller_id = u.id
+    WHERE b.user_id = ?
+    ORDER BY b.bid_time DESC
   `;
-  
-  db.query(query, (err, results) => {
+
+  db.query(query, [user_id], (err, results) => {
     if (err) {
       console.error('Database error:', err);
       return res.status(500).json({
         success: false,
-        message: 'Error fetching items'
+        message: 'Error fetching bid history'
       });
     }
 
-    return res.json({
+    res.render('payment', { 
+      items: results,
+      username: req.session.user.username
+    });
+  });
+});
+
+app.post('/confirm-payment', (req, res) => {
+  // You can insert into a payments table here
+  res.send('✅ Payment successful! Thank you.');
+});
+
+app.get('/api/profile', (req, res) => {
+  if (!req.session.user) {
+    return res.status(401).json({
+      success: false,
+      message: 'Please login to view your profile'
+    });
+  }
+
+  const user_id = req.session.user.id;
+
+  // Fetch user data and bid history in parallel
+  Promise.all([
+    // Get user details
+    new Promise((resolve, reject) => {
+      db.query('SELECT * FROM users WHERE id = ?', [user_id], (err, results) => {
+        if (err) reject(err);
+        else resolve(results[0]);
+      });
+    }),
+    // Get bid history
+    new Promise((resolve, reject) => {
+      const query = `
+        SELECT 
+          i.id as item_id,
+          i.title,
+          i.description,
+          b.amount as bid_amount,
+          b.bid_time,
+          u.username as seller_name
+        FROM bids b
+        JOIN items i ON b.item_id = i.id
+        JOIN users u ON i.seller_id = u.id
+        WHERE b.user_id = ? AND i.seller_id != ?
+        ORDER BY b.bid_time DESC
+      `;
+      db.query(query, [user_id, user_id], (err, results) => {
+        if (err) reject(err);
+        else resolve(results);
+      });
+    })
+  ])
+  .then(([user, bids]) => {
+    res.json({
       success: true,
-      items: results
+      user: user,
+      bids: bids
+    });
+  })
+  .catch(err => {
+    console.error('Database error:', err);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching profile data'
     });
   });
 });

@@ -3,8 +3,71 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>User Profile</title>
+  <title>Your Profile - Online Auction</title>
   <link rel="stylesheet" href="/styles.css">
+  <style>
+    .profile-container {
+      display: flex;
+      gap: 20px;
+      margin-top: 20px;
+    }
+    .user-info {
+      flex: 1;
+      background: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .bid-history {
+      flex: 2;
+    }
+    .bid-item {
+      background: #fff;
+      padding: 20px;
+      margin-bottom: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .bid-item h3 {
+      margin: 0 0 10px 0;
+      color: #333;
+    }
+    .bid-item p {
+      margin: 5px 0;
+      color: #666;
+    }
+    .bid-amount {
+      font-weight: bold;
+      color: #4CAF50;
+    }
+    .bid-time {
+      color: #888;
+      font-size: 0.9em;
+    }
+    .pay-button {
+      background-color: #4CAF50;
+      color: white;
+      padding: 8px 15px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+    .pay-button:hover {
+      background-color: #45a049;
+    }
+    .user-details {
+      margin-bottom: 20px;
+    }
+    .user-details h2 {
+      color: #333;
+      margin-bottom: 10px;
+    }
+    .user-details p {
+      margin: 5px 0;
+      color: #666;
+    }
+  </style>
 </head>
 <body>
   <nav>
@@ -13,34 +76,112 @@
       <li><a href="/search">Search Items</a></li>
       <li><a href="/add-item">Add Item</a></li>
       <li><a href="/profile">Profile</a></li>
-      <li><a href="/checkout">Checkout</a></li>
       <li><a href="/logout">Logout</a></li>
     </ul>
   </nav>
 
   <div class="container">
     <div class="card">
-      <h1>User Profile</h1>
-      <div class="profile-info">
-        <div class="user-details">
-          <h2>Welcome, <span id="username"></span></h2>
-          <div class="form-group">
-            <label>Email:</label>
-            <span id="email"></span>
+      <h1>Your Profile</h1>
+      
+      <div class="profile-container">
+        <div class="user-info">
+          <div class="user-details">
+            <h2>Account Information</h2>
+            <p><strong>Username:</strong> <span id="username"></span></p>
+            <p><strong>Email:</strong> <span id="email"></span></p>
+            <p><strong>Member since:</strong> <span id="member-since"></span></p>
           </div>
-          <div class="form-group">
-            <label>Member since:</label>
-            <span id="member-since"></span>
+          
+          <div class="user-stats">
+            <h2>Your Activity</h2>
+            <p><strong>Total Bids:</strong> <span id="total-bids">0</span></p>
           </div>
-          <div class="form-group">
-            <label>Bio:</label>
-            <span id="member-since"></span>
+        </div>
+
+        <div class="bid-history">
+          <h2>Your Bid History</h2>
+          <div id="bid-list">
+            <p>Loading your bid history...</p>
           </div>
         </div>
       </div>
     </div>
-
-    
   </div>
+
+  <script>
+    // Fetch user profile data
+    async function fetchProfileData() {
+      try {
+        const response = await fetch('/api/profile');
+        const data = await response.json();
+        
+        if (data.success) {
+          // Update user information
+          document.getElementById('username').textContent = data.user.username;
+          document.getElementById('email').textContent = data.user.email;
+          document.getElementById('member-since').textContent = new Date(data.user.created_at).toLocaleDateString();
+          
+          // Update bid history
+          const bidList = document.getElementById('bid-list');
+          if (data.bids && data.bids.length > 0) {
+            document.getElementById('total-bids').textContent = data.bids.length;
+            bidList.innerHTML = data.bids.map(bid => `
+              <div class="bid-item" data-item-id="${bid.item_id}">
+                <h3>${bid.title}</h3>
+                <p>Seller: ${bid.seller_name}</p>
+                <p>Your Bid: <span class="bid-amount">$${bid.bid_amount}</span></p>
+                <p class="bid-time">Bid placed on: ${new Date(bid.bid_time).toLocaleString()}</p>
+                <div class="description">
+                  ${bid.description}
+                </div>
+                <button class="pay-button" onclick="completePayment('${bid.item_id}', '${bid.bid_amount}')">
+                  Complete Payment
+                </button>
+              </div>
+            `).join('');
+          } else {
+            bidList.innerHTML = '<p>You haven\'t placed any bids yet.</p>';
+          }
+        } else {
+          console.error('Failed to fetch profile data');
+        }
+      } catch (error) {
+        console.error('Error fetching profile data:', error);
+      }
+    }
+
+    // Complete payment function
+    function completePayment(itemId, amount) {
+      // Get the current bid amount from the DOM
+      const currentBidElement = document.querySelector(`[data-item-id="${itemId}"] .bid-amount`);
+      const currentBidAmount = currentBidElement ? currentBidElement.textContent.replace('$', '') : amount;
+      
+      if (confirm(`Are you sure you want to complete payment of $${currentBidAmount} for this item?`)) {
+        fetch('/confirm-payment', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            item_id: itemId,
+            amount: currentBidAmount
+          })
+        })
+        .then(response => response.text())
+        .then(data => {
+          alert(data);
+          fetchProfileData(); // Refresh the data
+        })
+        .catch(error => {
+          console.error('Error:', error);
+          alert('An error occurred while processing your payment');
+        });
+      }
+    }
+
+    // Load profile data when page loads
+    document.addEventListener('DOMContentLoaded', fetchProfileData);
+  </script>
 </body>
 </html>

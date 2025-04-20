@@ -54,7 +54,6 @@
       <li><a href="/search">Search Items</a></li>
       <li><a href="/add-item">Add Item</a></li>
       <li><a href="/profile">Profile</a></li>
-      <li><a href="/checkout">Checkout</a></li>
       <li><a href="/logout" id="logoutLink">Logout</a></li>
     </ul>
   </nav>
@@ -77,13 +76,60 @@
               <div class="description">
                 <%- item.description %>
               </div>
-              <button class="bid-button">Place Bid</button>
+              <p>Current Bid: $<%= item.current_bid %></p>
+      
+              <!-- Bid form -->
+              <form class="bid-form" data-item-id="<%= item.id %>">
+                <input type="hidden" name="item_id" value="<%= item.id %>">
+                <input type="number" name="amount" step="0.01" placeholder="Enter your bid" required>
+                <button type="submit" class="bid-button">Place Bid</button>
+                <div class="bid-message"></div>
+              </form>
             </div>
           <% }); %>
         <% } else { %>
           <p>No items available for auction yet.</p>
         <% } %>
       </div>
+      
+      <script>
+        document.querySelectorAll('.bid-form').forEach(form => {
+          form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const formData = new FormData(this);
+            const itemId = this.dataset.itemId;
+            const messageDiv = this.querySelector('.bid-message');
+            
+            fetch('/place-bid', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                item_id: formData.get('item_id'),
+                amount: parseFloat(formData.get('amount'))
+              })
+            })
+            .then(response => response.json())
+            .then(data => {
+              if (data.success) {
+                messageDiv.textContent = '✅ ' + data.message;
+                messageDiv.style.color = 'green';
+                // Refresh the page after 2 seconds to show updated bid
+                setTimeout(() => window.location.reload(), 2000);
+              } else {
+                messageDiv.textContent = '❌ ' + data.message;
+                messageDiv.style.color = 'red';
+              }
+            })
+            .catch(error => {
+              messageDiv.textContent = '❌ An error occurred while placing your bid';
+              messageDiv.style.color = 'red';
+              console.error('Error:', error);
+            });
+          });
+        });
+      </script>
     </div>
   </div>
 

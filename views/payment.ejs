@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Your Bids - Online Auction</title>
+  <link rel="stylesheet" href="/styles.css">
+  <style>
+    .bid-history {
+      margin-top: 20px;
+    }
+    .bid-item {
+      background: #fff;
+      padding: 20px;
+      margin-bottom: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .bid-item h3 {
+      margin: 0 0 10px 0;
+      color: #333;
+    }
+    .bid-item p {
+      margin: 5px 0;
+      color: #666;
+    }
+    .bid-amount {
+      font-weight: bold;
+      color: #4CAF50;
+    }
+    .bid-time {
+      color: #888;
+      font-size: 0.9em;
+    }
+    .pay-button {
+      background-color: #4CAF50;
+      color: white;
+      padding: 8px 15px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+    .pay-button:hover {
+      background-color: #45a049;
+    }
+  </style>
+</head>
+<body>
+  <nav>
+    <ul>
+      <li><a href="/homepage">Home</a></li>
+      <li><a href="/search">Search Items</a></li>
+      <li><a href="/add-item">Add Item</a></li>
+      <li><a href="/profile">Profile</a></li>
+      <li><a href="/logout">Logout</a></li>
+    </ul>
+  </nav>
+
+  <div class="container">
+    <div class="card">
+      <h1>Your Bid History</h1>
+      <div class="welcome-message">
+        Welcome, <%= username %>! Here are your active bids.
+      </div>
+      
+      <div class="bid-history">
+        <% if (items && items.length > 0) { %>
+          <% items.forEach(function(item) { %>
+            <div class="bid-item" data-item-id="<%= item.item_id %>">
+              <h3><%= item.title %></h3>
+              <p>Seller: <%= item.seller_name %></p>
+              <p>Your Bid: <span class="bid-amount">$<%= item.bid_amount %></span></p>
+              <p class="bid-time">Bid placed on: <%= new Date(item.bid_time).toLocaleString() %></p>
+              <div class="description">
+                <%- item.description %>
+              </div>
+              <button class="pay-button" onclick="completePayment('<%= item.item_id %>', '<%= item.bid_amount %>')">
+                Complete Payment
+              </button>
+            </div>
+          <% }); %>
+        <% } else { %>
+          <p>You haven't placed any bids yet.</p>
+        <% } %>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function completePayment(itemId, amount) {
+      // Get the current bid amount from the DOM
+      const currentBidElement = document.querySelector(`[data-item-id="${itemId}"] .bid-amount`);
+      const currentBidAmount = currentBidElement ? currentBidElement.textContent.replace('$', '') : amount;
+      
+      if (confirm(`Are you sure you want to complete payment of $${currentBidAmount} for this item?`)) {
+        fetch('/confirm-payment', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            item_id: itemId,
+            amount: currentBidAmount
+          })
+        })
+        .then(response => response.text())
+        .then(data => {
+          alert(data);
+          window.location.reload();
+        })
+        .catch(error => {
+          console.error('Error:', error);
+          alert('An error occurred while processing your payment');
+        });
+      }
+    }
+  </script>
+</body>
+</html>
