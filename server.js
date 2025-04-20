@@ -5,7 +5,7 @@ const session = require('express-session');
 const path = require('path');
 const fs = require('fs');
 const https = require('https');
-
+const http = require('http');
 const app = express();
 const port = 3000;
 
@@ -385,4 +385,8 @@ const httpsServer = https.createServer(sslOptions, app);
 // Start the server
 httpsServer.listen(3000, () => {
     console.log('🔒 Secure server running at https://localhost:3000');
+});
+
+http.createServer(app).listen(8080, () => {
+  console.log('🌐 HTTP server running at http://localhost:8080');
 });
