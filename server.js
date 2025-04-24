@@ -193,26 +193,37 @@ app.get('/check-auth', (req, res) => {
 
 // Search endpoint
 app.get('/api/search', (req, res) => {
-    const searchQuery = req.query.q || '';
-    
-    // ❌ Vulnerable version: using string concatenation
-    const query = `SELECT * FROM Items WHERE prodinfo LIKE '%${searchQuery}%' OR username LIKE '%${searchQuery}%'`;
-    
-    db.query(query, (err, results) => {
-        if (err) {
-            console.error('Database error:', err);
-            return res.status(500).json({
-                success: false,
-                message: 'Database error occurred'
-            });
-        }
-        
-        return res.json({
-            success: true,
-            results: results
-        });
+  const name = req.query.name;
+
+
+  if (!name) {
+    return res.status(400).json({
+      success: false,
+      message: 'Search term is required'
     });
+  }
+
+
+  const query = 'SELECT * FROM ITEMS_1 WHERE NAME = ?';
+
+
+  db.query(query, [name], (err, results) => {
+    if (err) {
+      console.error('Database error:', err);
+      return res.status(500).json({
+        success: false,
+        message: 'Database error occurred'
+      });
+    }
+
+
+    return res.json({
+      success: true,
+      results: results
+    });
+  });
 });
+
 
 // Add Item routes
 app.get('/add-item', (req, res) => {
@@ -279,52 +290,78 @@ app.post('/place-bid', (req, res) => {
     });
   }
 
-  const { item_id, amount, starting_price } = req.body;
+  const { item_id, amount } = req.body;
   
   // Validate required fields
-  if (!item_id || !amount || !starting_price) {
+  if (!item_id || !amount) {
     return res.status(400).json({
       success: false,
-      message: 'Item ID, bid amount, and starting price are required'
+      message: 'Item ID and bid amount are required'
     });
   }
 
-  // Validate bid amount is a positive number
-  if (isNaN(amount) || amount <= 0) {
+  // Convert amount to number and validate
+  const bidAmount = parseFloat(amount);
+  if (isNaN(bidAmount) || bidAmount <= 0) {
     return res.status(400).json({
       success: false,
       message: 'Bid amount must be a positive number'
     });
   }
 
-  // Use only the starting price from frontend for validation
-  if (amount <= starting_price) {
-    return res.status(400).json({
-      success: false,
-      message: `Bid amount must be higher than starting price of $${starting_price}`
-    });
-  }
-
-  const user_id = req.session.user.id;
-
-  // Insert the new bid
-  const insertBidQuery = `
-    INSERT INTO bids (item_id, user_id, amount)
-    VALUES (?, ?, ?)
+  // Get the actual starting price from the database
+  const getStartingPriceQuery = `
+    SELECT starting_price 
+    FROM items 
+    WHERE id = ?
   `;
 
-  db.query(insertBidQuery, [item_id, user_id, amount], (err, results) => {
+  db.query(getStartingPriceQuery, [item_id], (err, results) => {
     if (err) {
       console.error('Database error:', err);
       return res.status(500).json({
         success: false,
-        message: 'Error placing bid'
+        message: 'Error checking item details'
       });
     }
 
-    return res.json({
-      success: true,
-      message: 'Bid placed successfully'
+    if (results.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Item not found'
+      });
+    }
+
+    const actualStartingPrice = parseFloat(results[0].starting_price);
+    
+    if (bidAmount <= actualStartingPrice) {
+      return res.status(400).json({
+        success: false,
+        message: `Bid amount must be higher than starting price of $${actualStartingPrice}`
+      });
+    }
+
+    const user_id = req.session.user.id;
+
+    // Insert the new bid
+    const insertBidQuery = `
+      INSERT INTO bids (item_id, user_id, amount)
+      VALUES (?, ?, ?)
+    `;
+
+    db.query(insertBidQuery, [item_id, user_id, bidAmount], (err, results) => {
+      if (err) {
+        console.error('Database error:', err);
+        return res.status(500).json({
+          success: false,
+          message: 'Error placing bid'
+        });
+      }
+
+      return res.json({
+        success: true,
+        message: 'Bid placed successfully'
+      });
     });
   });
 });
